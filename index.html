@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GPA & CGPA Calculator</title>
+
+    <script>
+        const userPref = localStorage.getItem("theme");
+        if (userPref === "dark" || (!userPref && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+            document.documentElement.classList.add("dark");
+        }
+    </script>
+
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gradient-to-r from-blue-100 to-purple-200 dark:from-gray-800 dark:to-gray-900 min-h-screen flex items-center justify-center">
+
+<div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-lg rounded-xl p-8 w-full max-w-2xl relative">
+
+    <!-- Theme Toggle -->
+    <button onclick="toggleTheme()" class="absolute top-4 right-4 bg-gray-200 dark:bg-gray-700 p-2 rounded-full">
+        <span id="theme-icon">🌙</span>
+    </button>
+
+    <h1 class="text-3xl font-bold text-center text-purple-700 dark:text-purple-300 mb-6">
+        🎓 GPA & CGPA Calculator
+    </h1>
+
+    <form method="POST" class="space-y-4">
+
+        <!-- Student Name -->
+        <input type="text" name="student" placeholder="Enter Student Name" value="{{ student or '' }}" required
+               class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded">
+
+        <!-- Select GPA or CGPA -->
+        <div class="flex gap-4">
+            <label class="flex items-center gap-2">
+                <input type="radio" name="calc_type" value="gpa" {% if calc_type=='gpa' %}checked{% endif %}>
+                GPA
+            </label>
+            <label class="flex items-center gap-2">
+                <input type="radio" name="calc_type" value="cgpa" {% if calc_type=='cgpa' %}checked{% endif %}>
+                CGPA
+            </label>
+        </div>
+
+        <!-- GPA Section -->
+        <div id="gpa-section" class="space-y-4">
+            <input type="number" name="num_subjects" id="num_subjects" placeholder="Number of Subjects" min="1"
+                   class="w-full p-3 border dark:border-gray-600 rounded" oninput="generateGPAFields()"
+                   value="{{ request.form.num_subjects or '' }}">
+            <div id="subjectFields"></div>
+        </div>
+
+        <!-- CGPA Section -->
+        <div id="cgpa-section" class="space-y-4 hidden">
+            <input type="number" name="num_semesters" id="num_semesters" placeholder="Number of Semesters" min="1"
+                   class="w-full p-3 border dark:border-gray-600 rounded" oninput="generateCGPAFields()"
+                   value="{{ request.form.num_semesters or '' }}">
+            <div id="semesterFields"></div>
+        </div>
+
+        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded">
+            Calculate
+        </button>
+    </form>
+
+    <!-- GPA Result -->
+    {% if gpa is not none %}
+    <div class="mt-6 bg-green-100 dark:bg-green-700 p-4 rounded text-center">
+        <h2 class="text-xl font-semibold">🎉 GPA Calculated!</h2>
+
+        <p class="text-gray-700 dark:text-white">
+            {{ student }}'s GPA:
+            <span class="font-bold text-2xl">{{ gpa }}</span>
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- CGPA Result -->
+    {% if cgpa is not none %}
+    <div class="mt-6 bg-blue-100 dark:bg-blue-700 p-4 rounded text-center">
+        <h2 class="text-xl font-semibold">🎉 CGPA Calculated!</h2>
+
+        <p class="text-gray-700 dark:text-white">
+            {{ student }}'s CGPA:
+            <span class="font-bold text-2xl">{{ cgpa }}</span>
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Errors -->
+    {% if submitted and error %}
+    <div class="mt-6 bg-red-100 dark:bg-red-700 p-4 rounded text-center font-medium">
+        {{ error }}
+    </div>
+    {% endif %}
+
+</div>
+
+
+<script>
+function toggleTheme() {
+    const html = document.documentElement;
+    const icon = document.getElementById("theme-icon");
+    html.classList.toggle("dark");
+    localStorage.setItem("theme", html.classList.contains("dark") ? "dark" : "light");
+    icon.textContent = html.classList.contains("dark") ? "☀️" : "🌙";
+}
+
+// GPA/CGPA toggle
+function showSection() {
+    const gpaSection = document.getElementById("gpa-section");
+    const cgpaSection = document.getElementById("cgpa-section");
+    const calcType = document.querySelector('input[name="calc_type"]:checked').value;
+
+    if (calcType === "gpa") {
+        gpaSection.classList.remove("hidden");
+        cgpaSection.classList.add("hidden");
+    } else {
+        cgpaSection.classList.remove("hidden");
+        gpaSection.classList.add("hidden");
+    }
+}
+
+document.querySelectorAll('input[name="calc_type"]').forEach(radio => {
+    radio.addEventListener('change', showSection);
+});
+window.addEventListener('load', showSection);
+
+// Dynamic subject fields
+function generateGPAFields() {
+    const num = parseInt(document.getElementById("num_subjects").value);
+    const container = document.getElementById("subjectFields");
+    container.innerHTML = "";
+
+    if (!num || num <= 0) return;
+
+    for (let i = 1; i <= num; i++) {
+        container.innerHTML += `
+        <div class="flex gap-4 mt-2">
+            <select name="grade${i}" required class="w-1/2 p-2 border rounded">
+                <option value="">Grade ${i}</option>
+                <option>A+</option><option>A</option><option>A-</option>
+                <option>B+</option><option>B</option><option>B-</option>
+                <option>C+</option><option>C</option><option>C-</option>
+                <option>F</option>
+            </select>
+            <input type="number" step="0.5" name="credit${i}" placeholder="Credits"
+                   required class="w-1/2 p-2 border rounded">
+        </div>`;
+    }
+}
+
+function generateCGPAFields() {
+    const num = parseInt(document.getElementById("num_semesters").value);
+    const container = document.getElementById("semesterFields");
+    container.innerHTML = "";
+
+    if (!num || num <= 0) return;
+
+    for (let i = 1; i <= num; i++) {
+        container.innerHTML += `
+        <div class="flex gap-4 mt-2">
+            <input type="number" step="0.01" name="sem_gpa${i}" placeholder="Semester ${i} GPA"
+                   required class="w-1/2 p-2 border rounded">
+            <input type="number" name="sem_credit${i}" placeholder="Credits"
+                   required class="w-1/2 p-2 border rounded">
+        </div>`;
+    }
+}
+</script>
+
+</body>
+</html>
